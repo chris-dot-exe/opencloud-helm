@@ -213,6 +213,22 @@ postgres:
     storageClass: ""
     # Access mode
     accessMode: ReadWriteOnce
+  external:
+    # External PostgreSQL server
+    existingSecret:
+      name: ""
+      usernameKey: ""
+      passwordKey: ""
+      databaseKey: ""
+      jdbcUrlKey: ""
+
+    # Optional values for external PostgreSQL server
+    # ignored if postgres.external.existingSecret is set
+    host: ""
+    port: "5432"
+    database: ""
+    user: ""
+    password: ""
 
 
 # =====================================================================

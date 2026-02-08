@@ -313,3 +313,84 @@ secretKey
 rootPassword
 {{- end -}}
 {{- end -}}
+
+{{/*
+Return JBDC URL for Keycloak's postgreSQL
+*/}}
+{{- define "opencloud.oidc.jdbc-url" -}}
+{{- if .Values.postgres.enabled }}
+- name: KC_DB_URL
+  value: "jdbc:postgresql://{{ include "opencloud.postgres.fullname" . }}:5432/{{ .Values.postgres.database }}"
+{{- else if not (empty .Values.postgres.external.existingSecret.jdbcUrlKey)}}
+- name: KC_DB_URL
+  secretKeyRef:
+    name: {{ .Values.postgres.external.existingSecret.name }}
+    key: {{ .Values.postgres.external.existingSecret.jdbcUrlKey }}
+{{- else }}
+- name: KC_DB_URL
+  value: "jdbc:postgresql://{{.Values.postgres.external.host}}:{{.Values.postgres.external.port}}/{{.Values.postgres.external.database}}"
+{{- end}}
+{{- end}}
+
+{{/*
+Return Keycloak's postgreSQL environment data
+*/}}
+{{- define "opencloud.oidc.internal-db-envs" -}}
+- name: KC_DB
+  value: postgres
+{{ include "opencloud.oidc.jdbc-url" . }}
+{{- if .Values.postgres.existingSecret }}
+- name: KC_DB_USERNAME
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgres.existingSecret }}
+      key: username
+- name: KC_DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgres.existingSecret }}
+      key: password
+{{- else}}
+- name: KC_DB_USERNAME
+  value: {{ .Values.postgres.user }}
+- name: KC_DB_PASSWORD
+  value: {{ .Values.postgres.password }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return Keycloak's the external postgreSQL environment data
+*/}}
+{{- define "opencloud.oidc.external-db-envs" -}}
+- name: KC_DB
+  value: postgres
+{{ include "opencloud.oidc.jdbc-url" . }}
+{{- if .Values.postgres.external.existingSecret.name }}
+- name: KC_DB_USERNAME
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgres.external.existingSecret.name }}
+      key: {{ .Values.postgres.external.existingSecret.usernameKey }}
+- name: KC_DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgres.external.existingSecret.name }}
+      key: {{ .Values.postgres.external.existingSecret.passwordKey }}
+{{- else }}
+- name: KC_DB_USERNAME
+  value: {{ .Values.postgres.external.user }}
+- name: KC_DB_PASSWORD
+  value: {{ .Values.postgres.external.password }}
+{{- end }}
+{{- end }}
+
+{{/*
+Returns the final DB config for keycloak
+*/}}
+{{- define "opencloud.oidc.db-envs" -}}
+{{- if .Values.postgres.enabled }}
+{{- include "opencloud.oidc.internal-db-envs" . }}
+{{- else }}
+{{- include "opencloud.oidc.external-db-envs" . }}
+{{- end}}
+{{- end}}
