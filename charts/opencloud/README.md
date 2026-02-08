@@ -198,15 +198,13 @@ This will prepend `my-registry.com/` to all image references in the chart. For e
 | --------- | ----------- | ------- |
 | `namespace` | Deprecated: Namespace is now controlled by Helm (.Release.Namespace) | (removed) |
 | `global.domain.opencloud` | Domain for OpenCloud | `cloud.opencloud.test` |
-| `global.domain.keycloak` | Domain for Keycloak | `keycloak.opencloud.test` |
+| `global.domain.oidc` | Domain for Keycloak/OIDC provider | `keycloak.opencloud.test` |
 | `global.domain.minio` | Domain for MinIO | `minio.opencloud.test` |
 | `global.domain.collabora` | Domain for Collabora | `collabora.opencloud.test` |
 | `global.domain.companion` | Domain for Companion | `companion.opencloud.test` |
 | `global.domain.wopi` | Domain for WOPI server | `wopiserver.opencloud.test` |
 | `global.tls.enabled` | Enable TLS (set to false when using gateway TLS termination externally) | `false` |
 | `global.tls.secretName` | secretName for TLS certificate | `""` |
-| `global.oidc.issuer` | OpenID Connect Issuer URL | `""` generated to use the internal keycloak|
-| `global.oidc.clientId` | OpenID Connect Client ID used by OpenCloud | `"web"` |
 | `global.storage.storageClass` | Storage class for persistent volumes | `""` |
 | `global.image.registry` | Global registry override for all images (e.g., `my-registry.com`) | `""` |
 | `global.image.pullPolicy` | Global pull policy override for all images (`Always`, `IfNotPresent`, `Never`) | `""` |
@@ -257,19 +255,23 @@ The following options configure S3 for user file storage, either with the intern
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `opencloud.storage.s3.internal.enabled` | Enable internal MinIO instance | `true` |
-| `opencloud.storage.s3.internal.existingSecret` | Name of the existing secret | `` |
-| `opencloud.storage.s3.internal.rootUser` | MinIO root user | `opencloud` |
-| `opencloud.storage.s3.internal.rootPassword` | MinIO root password | `opencloud-secret-key` |
-| `opencloud.storage.s3.internal.bucketName` | MinIO bucket name | `opencloud-bucket` |
-| `opencloud.storage.s3.internal.region` | MinIO region | `default` |
-| `opencloud.storage.s3.internal.resources` | CPU/Memory resource requests/limits | See values.yaml |
-| `opencloud.storage.s3.internal.persistence.enabled` | Enable MinIO persistence | `true` |
-| `opencloud.storage.s3.internal.persistence.existingClaim` | Name of existing PVC instead of the settings below | `` |
-| `opencloud.storage.s3.internal.persistence.size` | Size of the MinIO persistent volume | `30Gi` |
-| `opencloud.storage.s3.internal.persistence.storageClass` | MinIO storage class | `""` |
-| `opencloud.storage.s3.internal.persistence.accessMode` | MinIO access mode | `ReadWriteOnce` |
-| `opencloud.storage.s3.external.enabled` | Enable external S3 | `false` |
+| `opencloud.storage.s3.enabled` | Enable internal MinIO instance | `true` |
+| `opencloud.storage.s3.image.registry` | MinIO image registry | `docker.io` |
+| `opencloud.storage.s3.image.repository` | MinIO image repository | `minio/minio` |
+| `opencloud.storage.s3.image.tag` | MinIO image tag | `latest` |
+| `opencloud.storage.s3.image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `opencloud.storage.s3.httpRoute.enabled` | Enable HTTPRoute for MinIO | `false` |
+| `opencloud.storage.s3.existingSecret` | Name of the existing secret | `` |
+| `opencloud.storage.s3.rootUser` | MinIO root user | `opencloud` |
+| `opencloud.storage.s3.rootPassword` | MinIO root password | `opencloud-secret-key` |
+| `opencloud.storage.s3.bucketName` | MinIO bucket name | `opencloud-bucket` |
+| `opencloud.storage.s3.region` | MinIO region | `default` |
+| `opencloud.storage.s3.resources` | CPU/Memory resource requests/limits | See values.yaml |
+| `opencloud.storage.s3.persistence.enabled` | Enable MinIO persistence | `true` |
+| `opencloud.storage.s3.persistence.existingClaim` | Name of existing PVC instead of the settings below | `` |
+| `opencloud.storage.s3.persistence.size` | Size of the MinIO persistent volume | `30Gi` |
+| `opencloud.storage.s3.persistence.storageClass` | MinIO storage class | `""` |
+| `opencloud.storage.s3.persistence.accessMode` | MinIO access mode | `ReadWriteOnce` |
 | `opencloud.storage.s3.external.endpoint` | External S3 endpoint URL | `""` |
 | `opencloud.storage.s3.external.region` | External S3 region | `default` |
 | `opencloud.storage.s3.external.existingSecret` | Name of the existing secret | `` |
@@ -277,6 +279,10 @@ The following options configure S3 for user file storage, either with the intern
 | `opencloud.storage.s3.external.secretKey` | External S3 secret key | `""` |
 | `opencloud.storage.s3.external.bucket` | External S3 bucket | `""` |
 | `opencloud.storage.s3.external.createBucket` | Create bucket if it doesn't exist | `true` |
+
+**Note:**  
+- The `internal` key under `storage.s3` has been removed. All MinIO/internal S3 settings are now directly under `storage.s3`.
+- The `enabled` field under `storage.s3.external` has been removed. To use external S3, set the `endpoint` and other required fields.
 
 ### OpenCloud PosixFS Storage Settings
 
@@ -317,41 +323,53 @@ The following options allow setting up a POSIX-compatible filesystem (such as NF
 
 ### Keycloak Settings
 
-By default the chart deploys an internal keycloak. It can be disabled and replaced with an external IdP.
+By default the chart deploys an internal Keycloak. It can be disabled and replaced with an external OIDC provider.
 
 #### Internal Keycloak
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `keycloak.internal.enabled` | Enable internal Keycloak deployment | `true` |
-| `keycloak.internal.image.repository` | Keycloak image repository | `quay.io/keycloak/keycloak` |
-| `keycloak.internal.image.tag` | Keycloak image tag | `26.1.4` |
-| `keycloak.internal.image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `keycloak.internal.replicas` | Number of replicas | `1` |
-| `keycloak.internal.existingSecret` | Name of the existing secret | `` |
-| `keycloak.internal.adminUser` | Admin user | `admin` |
-| `keycloak.internal.adminPassword` | Admin password | `admin` |
-| `keycloak.internal.realm` | Realm name | `openCloud` |
-| `keycloak.internal.resources` | CPU/Memory resource requests/limits | `{}` |
-| `keycloak.internal.cors.enabled` | Enable CORS | `true` |
-| `keycloak.internal.cors.allowAllOrigins` | Allow all origins | `true` |
+| `oidc.enabled` | Enable internal Keycloak deployment | `true` |
+| `oidc.image.registry` | Keycloak image registry | `quay.io` |
+| `oidc.image.repository` | Keycloak image repository | `keycloak/keycloak` |
+| `oidc.image.tag` | Keycloak image tag | `26.5.2` |
+| `oidc.image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `oidc.replicas` | Number of replicas | `1` |
+| `oidc.existingSecret` | Name of the existing secret | `` |
+| `oidc.adminUser` | Admin user | `admin` |
+| `oidc.adminPassword` | Admin password | `admin` |
+| `oidc.realm` | Realm name | `openCloud` |
+| `oidc.resources` | CPU/Memory resource requests/limits | `{}` |
+| `oidc.cors.enabled` | Enable CORS | `true` |
+| `oidc.cors.allowAllOrigins` | Allow all origins | `true` |
+| `oidc.cors.origins` | Allowed origins (if `allowAllOrigins` is `false`) | `[]` |
+| `oidc.cors.methods` | Allowed HTTP methods | `"GET,POST,PUT,DELETE,OPTIONS"` |
+| `oidc.cors.headers` | Allowed headers | `"Origin,Accept,Authorization,Content-Type,Cache-Control"` |
+| `oidc.cors.exposedHeaders` | Exposed headers | `"Access-Control-Allow-Origin,Access-Control-Allow-Credentials"` |
+| `oidc.cors.allowCredentials` | Allow credentials | `"true"` |
+| `oidc.cors.maxAge` | Max age in seconds | `"3600"` |
 
-> **Note**: When using internal Keycloak with multiple OpenCloud replicas (`opencloud.replicas > 1`), you must use an external shared database or LDAP. The embedded IDM does not support replication. See [issue #53](https://github.com/opencloud-eu/helm/issues/53) for details.
+> **Note**: When using internal Keycloak with multiple OpenCloud replicas (`opencloud.replicas > 1`), you must use an external shared database or LDAP. The embedded IDM does not support replication.
 
-#### Example: Using External IDP
+#### External OIDC Provider
+
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `oidc.enabled` | Deploy internal Keycloak (`true`) or use external OIDC (`false`) | `true` |
+| `oidc.external.issuerUrl` | OIDC Issuer URL (e.g., `https://keycloak.example.com/realms/openCloud`) | `""` |
+| `oidc.external.clientId` | OIDC Client ID | `"web"` |
+| `oidc.external.accountUrl` | Account management URL (optional) | `""` |
+
+#### Example: Using External OIDC Provider
 
 ```yaml
-global:
-  oidc:
-    issuer: "https://idp.example.com/realms/openCloud"
+oidc:
+  enabled: false
+  external:
+    issuerUrl: "https://keycloak.example.com/realms/openCloud"
     clientId: "opencloud-web"
-
-keycloak:
-  internal:
-    enabled: false
+    accountUrl: "https://keycloak.example.com/realms/openCloud/account"
 ```
-
-**Note**: If `keycloak.internal.enabled` is `true`, the `global.oidc.issuer` should be left empty to not override the generated issuer URL.
 
 ### PostgreSQL Settings
 
@@ -425,13 +443,13 @@ The following HTTPRoutes are created when `httpRoute.enabled` is set to `true`:
    - Port: 9200
    - Headers: Removes Permissions-Policy header to prevent browser console errors
 
-2. **Keycloak HTTPRoute** (when `keycloak.internal.enabled` is `true`):
-   - Hostname: `global.domain.keycloak`
+2. **Keycloak HTTPRoute** (when `oidc.enabled` is `true`):
+   - Hostname: `global.domain.oidc`
    - Service: `{{ release-name }}-keycloak`
    - Port: 8080
    - Headers: Adds Permissions-Policy header to prevent browser features like interest-based advertising
 
-3. **MinIO HTTPRoute** (when `opencloud.storage.mode` is `s3` and `opencloud.storage.s3.internal.enabled` is `true`):
+3. **MinIO HTTPRoute** (when `opencloud.storage.mode` is `s3` and `opencloud.storage.s3.enabled` is `true`):
    - Hostname: `global.domain.minio`
    - Service: `{{ release-name }}-minio`
    - Port: 9001
